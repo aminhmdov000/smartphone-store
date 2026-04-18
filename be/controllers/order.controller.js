@@ -1,27 +1,22 @@
-const db = require('../config/db'); // IMPORT THE DATABASE CONNECTION POOL TO EXECUTE SQL QUERIES IN THIS CONTROLLER
+const db = require('../config/db'); 
 const VALID_ORDER_STATUSES = ['pending', 'paid', 'shipped', 'delivered', 'cancelled'];
 const VALID_PAYMENT_METHODS = ['fake_card', 'cash_on_delivery'];
-exports.checkout = async(req,res,next) => { // CONTROLLER FUNCTION TO HANDLE CHECKOUT AND ORDER CREATI
-    const userID = req.user.id; //FROM AUTHMIDDLEWARE recoded in req.user 
+exports.checkout = async(req,res,next) => { 
+    const userID = req.user.id; 
     const paymentMethod = req.body.paymentMethod || 'cash_on_delivery';
-    const connection = await db.getConnection(); // GET A CONNECTION FROM THE POOL connection is used to execute multiple queries in a transaction
+    const connection = await db.getConnection(); 
     try{
-        await connection.beginTransaction(); // START A TRANSACTION FOR CHECKOUT PROCESS DONT PERMANENTLY CHANGE THE DATABASE UNTIL ALL STEPS ARE SUCCESSFUL
+        await connection.beginTransaction();
         if (!VALID_PAYMENT_METHODS.includes(paymentMethod)) {
             await connection.rollback();
             return res.status(400).json({error: 'Invalid payment method!'});
         }
         const requestedItems = Array.isArray(req.body.items) ? req.body.items : [];
-        //GET USER CART
-        // QUERY THE DATABASE TO GET THE CART ASSOCIATED WITH THE USER ID. 
-        // THIS IS NECESSARY TO RETRIEVE THE ITEMS IN THE CART AND CALCULATE THE TOTAL PRICE FOR THE ORDER. 
-        // WE USE connection.query INSTEAD OF db.query BECAUSE WE WANT TO USE THE SAME CONNECTION FOR ALL QUERIES IN THIS TRANSACTION, ENSURING THAT THEY ARE EXECUTED ATOMICALLY.
+
         const [carts] = await connection.query('SELECT * FROM carts WHERE user_id = ?', [userID]); 
-        const cart = carts[0] || null; // IF CART EXISTS, PROCEED TO GET CART ITEMS AND CALCULATE TOTAL PRICE FOR THE ORDER
+        const cart = carts[0] || null; 
         let items = [];
-        //GET CART ITEMS 
-        // QUERY THE DATABASE TO GET THE ITEMS IN THE USER'S CART, JOINING THE cart_items TABLE WITH THE products TABLE TO RETRIEVE PRODUCT DETAILS SUCH AS PRICE. 
-        // THIS INFORMATION IS NECESSARY TO CALCULATE THE TOTAL PRICE OF THE ORDER AND TO CREATE ORDER ITEMS IN THE DATABASE.
+      
         if (cart) {
             const [cartItems] = await connection.query(
                 'SELECT ci.product_id, ci.quantity, p.price FROM cart_items ci JOIN products p ON ci.product_id = p.id WHERE ci.cart_id = ?',
@@ -64,22 +59,17 @@ exports.checkout = async(req,res,next) => { // CONTROLLER FUNCTION TO HANDLE CHE
             await connection.rollback();
             return res.status(400).json({error: 'Cart is empty!'});
         }
-        //CALCUALTE TOTAL PRICE OF THE ORDER 
-        // WE LOOP THROUGH THE ITEMS IN THE CART AND CALCULATE THE TOTAL PRICE BY MULTIPLYING THE PRICE OF EACH PRODUCT BY ITS QUANTITY AND SUMMING THEM UP.
+    
         let totalPrice = 0;
-        items.forEach(item =>{ // FOR EACH ITEM IN THE CART, CALCULATE THE TOTAL PRICE BY MULTIPLYING THE PRICE OF THE PRODUCT BY THE QUANTITY AND ADDING IT TO THE totalPrice VARIABLE
+        items.forEach(item =>{ 
             totalPrice += item.price * item.quantity;
         });
         const orderStatus = paymentMethod === 'fake_card' ? 'paid' : 'pending';
-        //CREATE ORDER
-        // WE INSERT A NEW RECORD INTO THE orders TABLE WITH THE USER ID AND THE CALCULATED TOTAL PRICE. 
-        // THIS CREATES A NEW ORDER IN THE DATABASE AND RETURNS THE INSERTED ORDER'S ID, WHICH WE USE TO CREATE ORDER ITEMS IN THE NEXT STEP.
+        
         const [orderResult] = await connection.query('INSERT INTO orders(user_id, total_price, status) VALUES(?,?,?)',
             [userID, totalPrice, orderStatus]);
         const orderID = orderResult.insertId;
-        // LOOP cart items and check stock
-        //INSERT ORDER ITEMS INTO ORDER_ITEMS TABLE
-        // WE LOOP THROUGH THE ITEMS IN THE CART AND INSERT A RECORD FOR EACH ITEM INTO THE order_items TABLE, ASSOCIATING IT WITH THE CREATED ORDER ID.
+
         for(let item of items){
             //lock product row
             const [products] = await connection.query('SELECT stock FROM products WHERE id = ? FOR UPDATE',
@@ -106,10 +96,10 @@ exports.checkout = async(req,res,next) => { // CONTROLLER FUNCTION TO HANDLE CHE
         };
         //CLEAR CART
         if (cart) {
-            await connection.query('DELETE FROM cart_items WHERE cart_id = ?', [cart.id]); // AFTER CREATING THE ORDER AND ORDER ITEMS, WE CLEAR THE USER'S CART BY DELETING ALL ITEMS ASSOCIATED WITH THE CART ID. THIS ENSURES THAT THE CART IS EMPTY AFTER CHECKOUT.
+            await connection.query('DELETE FROM cart_items WHERE cart_id = ?', [cart.id]); 
         }
-        await connection.commit(); // IF ALL STEPS ARE SUCCESSFUL, WE COMMIT THE TRANSACTION TO PERMANENTLY SAVE THE CHANGES TO THE DATABASE. IF ANY STEP FAILS, WE ROLLBACK THE TRANSACTION TO REVERT ANY CHANGES MADE DURING THE CHECKOUT PROCESS, ENSURING DATA INTEGRITY.
-        //COMMIT IS CALLED TO PERMANENTLY SAVE ALL CHANGES MADE TO THE DATABASE DURING THE TRANSACTION. THIS ENSURES THAT ALL QUERIES EXECUTED IN THE TRANSACTION ARE SAVED TO THE DATABASE ONLY IF THEY ALL SUCCEED, MAINTAINING DATA INTEGRITY AND PREVENTING PARTIAL UPDATES IN CASE OF FAILURES.
+        await connection.commit(); 
+
         return res.status(201).json({
             success: paymentMethod === 'fake_card' ? 'Payment successful and order created.' : 'Order created successfully.',
             orderID,
@@ -117,7 +107,6 @@ exports.checkout = async(req,res,next) => { // CONTROLLER FUNCTION TO HANDLE CHE
             paymentMethod
         });
     } catch (error) {
-        //rollback is like this 'cancel everything' if any error occurs during the checkout process, we rollback the transaction to revert any changes made to the database, ensuring that the database remains in a consistent state. This is important to prevent partial updates to the database in case of failures.
         await connection.rollback(); // IF ANY ERROR OCCURS DURING THE CHECKOUT PROCESS, WE ROLLBACK THE TRANSACTION TO REVERT ANY CHANGES MADE TO THE DATABASE, ENSURING THAT THE DATABASE REMAINS IN A CONSISTENT STATE. THIS IS IMPORTANT TO PREVENT PARTIAL UPDATES TO THE DATABASE IN CASE OF FAILURES.
         // ROLLBACK IS CALLED TO UNDO ANY CHANGES MADE TO THE DATABASE DURING THE TRANSACTION, ENSURING THAT THE DATABASE REMAINS IN A CONSISTENT STATE EVEN IF AN ERROR OCCURS. THIS IS CRUCIAL FOR MAINTAINING DATA INTEGRITY AND PREVENTING PARTIAL UPDATES TO THE DATABASE.
         next(error)       
