@@ -107,21 +107,18 @@ exports.checkout = async(req,res,next) => {
             paymentMethod
         });
     } catch (error) {
-        await connection.rollback(); // IF ANY ERROR OCCURS DURING THE CHECKOUT PROCESS, WE ROLLBACK THE TRANSACTION TO REVERT ANY CHANGES MADE TO THE DATABASE, ENSURING THAT THE DATABASE REMAINS IN A CONSISTENT STATE. THIS IS IMPORTANT TO PREVENT PARTIAL UPDATES TO THE DATABASE IN CASE OF FAILURES.
-        // ROLLBACK IS CALLED TO UNDO ANY CHANGES MADE TO THE DATABASE DURIG THE TRANSACTION, ENSURING THAT THE DATABASE REMAINS IN A CONSISTENT STATE EVEN IF AN ERROR OCCURS. THIS IS CRUCIAL FOR MAINTAINING DATA INTEGRITY AND PREVENTING PARTIAL UPDATES TO THE DATABASE.
+        await connection.rollback(); 
         next(error)       
     }
     finally{
-        //RELEASE IS CALLED TO RETURN THE DATABASE CONNECTION BACK TO THE POOL, ENSURING THAT IT CAN BE REUSED FOR OTHER REQUESTS. THIS IS IMPORTANT TO PREVENT CONNECTION LEAKS AND TO MAINTAIN THE PERFORMANCE OF THE APPLICATION BY EFFICIENTLY MANAGING DATABASE CONNECTIONS.
-        connection.release(); // FINALLY, WE RELEASE THE DATABASE CONNECTION BACK TO THE POOL, WHETHER THE CHECKOUT PROCESS SUCCEEDED OR FAILED. THIS IS IMPORTANT TO ENSURE THAT CONNECTIONS ARE NOT LEAKED AND ARE AVAILABLE FOR OTHER REQUESTS.
+        connection.release(); 
     }
 };
 
 // GET ALL ORDERS FOR THE LOGGED-IN USER
 exports.myOrders = async(req,res,next) => {
     try {
-        const userID = req.user.id; // get user id from token (authMiddleware decoded)
-        //get orders that belong to this user
+        const userID = req.user.id; 
         const [orders] = await db.query(`SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC`, [userID]);
         for(const order of orders){
           const [items] = await db.query(`
@@ -130,7 +127,7 @@ exports.myOrders = async(req,res,next) => {
             JOIN products p ON oi.product_id = p.id
             WHERE oi.order_id=?`, [order.id]
           );
-          order.items = items; // attach items to each other order object in the orders array, so we can return the order details along with the items in the response. This allows the frontend to display the order information along with the products included in each order.
+          order.items = items; 
         }
         return res.status(200).json(orders);
     } catch (error) {
@@ -138,12 +135,10 @@ exports.myOrders = async(req,res,next) => {
     }
 };
 
-//GET ORDER DETAILS INCLUDING ORDER ITEMS (PRODUCT INFO) FOR A SPECIFIC ORDER, CHECKING THAT THE ORDER BELONGS TO THE LOGGED-IN USER
 exports.orderDetails = async(req,res,next) => {
     try {
         const orderID = req.params.id;
-        const userID = req.user.id; // from protect middleware
-        //get order and check if belongs to this user
+        const userID = req.user.id; 
         const [orders] = await db.execute('SELECT * FROM orders WHERE id = ? AND user_id = ?',
             [orderID,userID]);
         if(orders.length === 0) return res.status(404).json({error: 'Order not found!'});
@@ -178,11 +173,10 @@ exports.getAllOrders = async(req,res,next) => {
 
 //update order status(admin)
 exports.updateStatus = async(req,res,next) => {
-    const orderID = req.params.id; // order id from url parametre
-    const {status} = req.body; // new status from request body
+    const orderID = req.params.id; 
+    const {status} = req.body; 
 
     try {
-        //check if status is valid
         if(!VALID_ORDER_STATUSES.includes(status)) return res.status(400).json({error: 'Invalid status!'});
         const [statuses] = await db.execute(`UPDATE orders SET status = ? WHERE id =?`, [status,orderID]);
         if(statuses.affectedRows === 0) return res.status(404).json({error: 'Order not found!'});
@@ -193,8 +187,8 @@ exports.updateStatus = async(req,res,next) => {
 };
 //cancelled orders
 exports.cancelledOrders = async(req,res,next) => {
-  const orderID = req.params.id; // order id from url
-  const userID = req.user.id; // from protect middleware
+  const orderID = req.params.id; 
+  const userID = req.user.id; 
   try {
     const [orders] = await db.execute('SELECT * FROM orders WHERE id = ? AND user_id = ?', [orderID, userID]);
     if(orders.length === 0) return res.status(404).json({error: 'Order not found!'});
