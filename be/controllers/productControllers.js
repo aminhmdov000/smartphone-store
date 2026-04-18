@@ -1,6 +1,6 @@
 //IMPORT DATABASE CONNECTION POOL
 const db = require('../config/db');
-//CONTROLLER FUNCTION TO GET ALL PRODUCTS FROM TE DATABASE
+//CONTROLLER FUNCTION TO GET ALL PRODUCTS FROM TE DATABAE
 exports.getAllProducts = async(req,res,next) => {
     try {
 
