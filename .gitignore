@@ -1,0 +1,10 @@
+.env
+.env.*
+!.env.example
+
+node_modules/
+logs/
+dist/
+frontend/smartphone-frontend/dist/
+be/uploads/
+.DS_Store
