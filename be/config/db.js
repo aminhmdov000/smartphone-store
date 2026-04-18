@@ -1,15 +1,16 @@
-// MySQL2 connection pool for database operations
 const mysql = require('mysql2');
-//CREATE A CONNECTION POOL TO THE DATABASE USING ENV VARIABLES FOR CONFIGURATION
-const pool = mysql.createPool({
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME
+const path = require('path');
+
+require('dotenv').config({ path: path.resolve(__dirname, '../../.env') }); 
+
+const connection = mysql.createConnection(process.env.DATABASE_URL);
+
+connection.connect(err => {
+    if (err) {
+        console.log("Error:", err.message);
+    } else {
+        console.log("It was connected to Railway via .env! ✅");
+    }
 });
 
-module.exports = pool.promise(); // export the pool with promise support for async/await usage in controllers
- 
-//db.query("SELECT ...", (err, results) => {}) 
-// --> db.query("SELECT ...") returns a promise that resolves to [results, fields]
-//In controllers, we can use async/await to handle database queries more cleanly, without callbacks.
+module.exports = connection;
