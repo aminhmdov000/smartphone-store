@@ -1,5 +1,5 @@
 const db = require('../config/db');
-//ADD PRODUCT TO CART CONTROLLER FUNCTION
+
 exports.addToCart = async(req,res,next) => {
     try {
         //GET USER ID FROM AUTH MIDDLEWARE
