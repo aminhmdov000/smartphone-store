@@ -1,7 +1,7 @@
 const db = require('../config/db'); // IMPORT THE DATABASE CONNECTION POOL TO EXECUTE SQL QUERIES IN THIS CONTROLLER
 const VALID_ORDER_STATUSES = ['pending', 'paid', 'shipped', 'delivered', 'cancelled'];
 const VALID_PAYMENT_METHODS = ['fake_card', 'cash_on_delivery'];
-exports.checkout = async(req,res,next) => { // CONTROLLER FUNCTION TO HANDLE CHECKOUT AND ORDER CREATION
+exports.checkout = async(req,res,next) => { // CONTROLLER FUNCTION TO HANDLE CHECKOUT AND ORDER CREATI
     const userID = req.user.id; //FROM AUTHMIDDLEWARE recoded in req.user 
     const paymentMethod = req.body.paymentMethod || 'cash_on_delivery';
     const connection = await db.getConnection(); // GET A CONNECTION FROM THE POOL connection is used to execute multiple queries in a transaction
