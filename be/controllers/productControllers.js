@@ -3,7 +3,7 @@ const db = require('../config/db');
 exports.getAllProducts = async(req,res,next) => {
     try {
         const [products] = await db.execute('SELECT * FROM products ORDER BY created_at DESC');
-        return res.status(200).json(products);
+        return res.status(200).json({success: true, data: products);
     } catch (error) {
        next(error);
     }
