@@ -68,7 +68,7 @@ export const useProductStore = defineStore('products', {
       this.error = null;
       try {
         const res = await getProducts();
-        this.products = res.data;
+        this.products = res.data.data;
       } catch (err) {
         this.products = [];
         this.error = err.response?.data?.error || 'Failed to load products.';
