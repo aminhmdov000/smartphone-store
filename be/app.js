@@ -18,6 +18,7 @@ const userRoutes = require('./routes/user.routes');
 const contactRoutes = require('./routes/contactus.routes');
 //CREATE EXPRESS APPLICATION
 const app = express();
+app.set('trust proxy', 1);
 //MIDDLEWARE TO PARSE JSON BODIES
 app.use(express.json());
 //MIDDLEWARE TO ENABLE CORS FOR ALL ROUTES (CALLING FRONTEND FROM DIFFERENT ORIGIN)
