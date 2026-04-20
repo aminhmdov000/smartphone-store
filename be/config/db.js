@@ -3,7 +3,7 @@ const mysql = require('mysql2/promise');
 
 require('dotenv').config(); 
 
-const connection = mysql.createConnection(process.env.DATABASE_URL);
+const connection = mysql.createPool(process.env.DATABASE_URL);
 
 connection.connect(err => {
     if (err) {
