@@ -22,7 +22,7 @@ const pool = mysql.createPool(process.env.DATABASE_URL);
 (async () => {
     try {
         const connection = await pool.getConnection();
-        console.log("Railway bazasına Promise ilə uğurla qoşuldu! ✅");
+        console.log("Railway successfully joined the database with Promise!");
         connection.release(); // Bağlantını hovuza geri qaytarırıq
     } catch (err) {
         console.error("Baza bağlantısında xəta:", err.message);
