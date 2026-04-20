@@ -2,9 +2,7 @@ const db = require('../config/db');
 
 exports.addToCart = async(req,res,next) => {
     try {
-        //GET USER ID FROM AUTH MIDDLEWARE
-        const userID = req.user.id; // comes from auth middleware
-        //GET PRODUCT ID AND QUANTITY FROM REQUEST BODY
+        const userID = req.user.id; 
         const {productID, quantity} = req.body;
         const ProductID = Number(productID);
         const Quantity = Number(quantity);
@@ -16,20 +14,18 @@ exports.addToCart = async(req,res,next) => {
         if (!Number.isInteger(Quantity) || Quantity <= 0) {
             return res.status(400).json({error: 'Quantity must be a positive integer!'});
         }
-        //CHECK IF USER HAS A CART OR CREATE NEW CART
+       
         let [carts] = await db.query(
             'SELECT * FROM carts WHERE user_id = ?',
             [userID]); 
         let cart;
         if(carts.length === 0){
-            //IF NO CART, CREATE NEW ONE 
             const [result] = await db.execute(
                 'INSERT INTO carts(user_id) VALUES(?)',
                 [userID]);          
             cart = {id: result.insertId};
         }
         else cart = carts[0]
-        // CHECK IF PRODUCT ALREADY EXISTS IN CART
         const [items] = await db.query(
         'SELECT * FROM cart_items WHERE cart_id = ? AND product_id = ?',
         [cart.id, ProductID]
@@ -40,7 +36,6 @@ exports.addToCart = async(req,res,next) => {
             )
         }
         else{
-            //IF NOT EXISTS → INSERT NEW ITEM
             await db.execute('INSERT INTO cart_items(cart_id,product_id,quantity) VALUES(?,?,?)',
                 [cart.id,ProductID,Quantity]
             );   
