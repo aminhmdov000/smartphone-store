@@ -1,5 +1,5 @@
-const mysql = require('mysql2');
-// const path = require('path');
+const mysql = require('mysql2/promise');
+
 
 require('dotenv').config(); 
 
