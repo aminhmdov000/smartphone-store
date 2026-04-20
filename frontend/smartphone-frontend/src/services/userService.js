@@ -15,3 +15,7 @@ export const updateProfile = (profileData) => {
 export const getProfile = () => {
   return api.get('/users/profile');
 };
+
+export const removeProfile = () => {
+  return api.delete('/users/profile');
+};
