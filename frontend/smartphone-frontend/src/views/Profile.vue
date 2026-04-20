@@ -2,7 +2,10 @@
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { logout } from '../services/authService';
-import { updateProfile as updateProfileRequest } from '../services/userService';
+import {
+  removeProfile as removeProfileRequest,
+  updateProfile as updateProfileRequest
+} from '../services/userService';
 import { useAuthStore } from '../store/modules/auth';
 import { useCartStore } from '../store/modules/cart';
 import { useOrderStore } from '../store/modules/orders';
@@ -25,6 +28,7 @@ const orderCount = computed(() => visibleOrders.value.length);
 const isLoggingOut = ref(false);
 const isEditingProfile = ref(false);
 const isSavingProfile = ref(false);
+const isDeletingProfile = ref(false);
 const profileMessage = ref('');
 const profileError = ref('');
 const editName = ref('');
@@ -135,6 +139,44 @@ const logOut = async() => {
   }
 };
 
+const deleteProfile = async() => {
+  if (isDeletingProfile.value) return;
+
+  const confirmed = window.confirm(
+    'Delete your account permanently? This cannot be undone.'
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  isDeletingProfile.value = true;
+  clearFeedback();
+
+  try {
+    await removeProfileRequest();
+  } catch (err) {
+    showFeedback('error', err.response?.data?.error || 'Failed to delete profile.');
+    isDeletingProfile.value = false;
+    return;
+  }
+
+  const refreshToken = localStorage.getItem('refreshToken');
+
+  try {
+    if (refreshToken) {
+      await logout(refreshToken);
+    }
+  } catch (err) {
+    console.error('Profile deletion logout cleanup failed:', err.response?.data || err.message);
+  } finally {
+    await cartStore.clearCart(false);
+    authStore.logout();
+    await router.push('/login');
+    isDeletingProfile.value = false;
+  }
+};
+
 onMounted(async() => {
   syncProfileForm();
   await orderStore.fetchMyOrders();
@@ -211,6 +253,13 @@ onMounted(async() => {
         </router-link>
         <button class="action-button secondary" @click="logOut" :disabled="isLoggingOut">
           {{ isLoggingOut ? 'Logging out...' : 'Logout' }}
+        </button>
+        <button
+          class="action-button danger"
+          @click="deleteProfile"
+          :disabled="isDeletingProfile"
+        >
+          {{ isDeletingProfile ? 'Deleting account...' : 'Delete Account' }}
         </button>
       </div>
 
@@ -435,6 +484,11 @@ h1 {
   background: rgba(15, 23, 42, 0.82);
   color: white;
   border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.danger {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
 }
 
 .state-message,
